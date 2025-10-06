@@ -1,4 +1,5 @@
-import AuthLayoutTemplate from '@/layouts/auth/auth-simple-layout';
+// import AuthLayoutTemplate from '@/layouts/auth/auth-simple-layout';
+import AuthLayoutTemplate from '@/layouts/auth/auth-card-layout';
 
 export default function AuthLayout({
     children,
