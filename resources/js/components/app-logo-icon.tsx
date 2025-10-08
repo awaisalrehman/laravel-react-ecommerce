@@ -8,7 +8,7 @@ export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
                 <rect width="1000" height="1000"/>
                 </clipPath>
             </defs>
-            <g id="logo" clip-path="url(#clip-logo)">
+            <g id="logo" clipPath="url(#clip-logo)">
                 <g id="Group_6" data-name="Group 6" transform="translate(-310.718 -272.079)">
                 <g id="Group_5" data-name="Group 5" transform="translate(310.718 273.161)">
                     <path id="Path_11" data-name="Path 11" d="M326.777,1686.48H310.718V1584.291h24.234a23.825,23.825,0,0,1,16.934,6.131,24.5,24.5,0,0,1,7.3,18.978v11.094a24.7,24.7,0,0,1-7.3,19.124,23.824,23.824,0,0,1-16.934,5.839h-8.175v41.022Zm0-56.934h8.175a8.758,8.758,0,0,0,5.985-1.752,9.784,9.784,0,0,0,2.19-7.3V1609.4a10.076,10.076,0,0,0-2.19-7.3,8.761,8.761,0,0,0-5.985-1.752h-8.175Z" transform="translate(-310.718 -689.057)"/>
