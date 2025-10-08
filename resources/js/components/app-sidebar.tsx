@@ -1,10 +1,7 @@
 "use client"
 
 import * as React from "react"
-import {
-  Bot,
-  SquareTerminal,
-} from "lucide-react"
+import { Link } from "@inertiajs/react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -17,63 +14,35 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import AppLogo from "./app-logo"
-import { Link } from "@inertiajs/react"
-import { dashboard } from '@/routes';
+import AppLogo from "@/components/app-logo"
 
-const data = {
-  navMain: [
-    {
-      title: "Products",
-      url: "#",
-      icon: SquareTerminal,
-      isActive: true,
-      items: [
-        {
-          title: "Add New",
-          url: "#",
-        },
-        {
-          title: "List Products",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Categories",
-      url: "#",
-      icon: Bot,
-      items: [
-        {
-          title: "Add New",
-          url: "#",
-        },
-        {
-          title: "List Categories",
-          url: "#",
-        },
-      ],
-    },
-  ],
-}
+// Update the import path to the correct location of your routes file
+import { dashboard } from "@/routes"
+
+import { sidebarNav } from "@/lib/sidebar-nav"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar variant="inset" {...props}>
+      {/* Logo Section */}
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-                <Link href={dashboard()} prefetch>
-                    <AppLogo />
-                </Link>
+              <Link href={dashboard()} prefetch>
+                <AppLogo />
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+
+      {/* Main Navigation */}
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={sidebarNav.navMain} />
       </SidebarContent>
+
+      {/* Footer / User Section */}
       <SidebarFooter>
         <NavUser />
       </SidebarFooter>
