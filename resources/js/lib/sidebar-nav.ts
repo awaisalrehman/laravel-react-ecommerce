@@ -1,11 +1,11 @@
-import { SquareTerminal, Bot } from "lucide-react"
+import { SquareTerminal, Bot, ShoppingBag, CalendarCheck } from "lucide-react"
 
 export const sidebarNav = {
   navMain: [
     {
       title: "Products",
       url: "#",
-      icon: SquareTerminal,
+      icon: ShoppingBag,
       isActive: true,
       items: [
         {
@@ -21,7 +21,7 @@ export const sidebarNav = {
     {
       title: "Categories",
       url: "#",
-      icon: Bot,
+      icon: SquareTerminal,
       items: [
         {
           title: "Add New",
@@ -32,6 +32,11 @@ export const sidebarNav = {
           url: "/admin/categories",
         },
       ],
+    },
+    {
+      title: "Tasks",
+      url: "/admin/tasks",
+      icon: CalendarCheck,
     },
   ],
 }
