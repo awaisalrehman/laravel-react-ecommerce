@@ -28,7 +28,7 @@ class ProductController extends Controller
      */
     public function create()
     {
-        $categories = Category::where('is_active', true)->get();
+        $categories = Category::where('status', true)->get();
 
         return inertia('Admin/Products/Create', [
             'categories' => $categories
@@ -95,7 +95,7 @@ class ProductController extends Controller
      */
     public function edit(Product $product)
     {
-        $categories = Category::where('is_active', true)->get();
+        $categories = Category::where('status', true)->get();
 
         return inertia('Admin/Products/Edit', [
             'product' => $product,
