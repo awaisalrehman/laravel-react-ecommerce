@@ -1,45 +1,104 @@
 import { InertiaLinkProps } from '@inertiajs/react';
 import { LucideIcon } from 'lucide-react';
+import { PageProps as InertiaPageProps } from '@inertiajs/core';
+
+// ─────────────────────────────
+// Core App Entities
+// ─────────────────────────────
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  avatar?: string;
+  email_verified_at: string | null;
+  two_factor_enabled?: boolean;
+  created_at: string;
+  updated_at: string;
+  [key: string]: unknown;
+}
 
 export interface Auth {
-    user: User;
+  user: User | null;
 }
 
 export interface BreadcrumbItem {
-    title: string;
-    href: string;
-}
-
-export interface NavGroup {
-    title: string;
-    items: NavItem[];
+  title: string;
+  href: string;
 }
 
 export interface NavItem {
-    title: string;
-    href: NonNullable<InertiaLinkProps['href']>;
-    icon?: LucideIcon | null;
-    isActive?: boolean;
+  title: string;
+  href: NonNullable<InertiaLinkProps['href']>;
+  icon?: LucideIcon | null;
+  isActive?: boolean;
 }
+
+export interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+// ─────────────────────────────
+// Shared Data from Middleware
+// ─────────────────────────────
 
 export interface SharedData {
-    name: string;
-    quote: { message: string; author: string };
-    auth: Auth;
-    sidebarOpen: boolean;
-    [key: string]: unknown;
+  name: string;
+  auth: Auth;
+  sidebarOpen: boolean;
+  flash?: {
+    success?: string;
+    error?: string;
+    message?: string;
+  };
+  [key: string]: unknown;
 }
 
-export interface User {
-    id: number;
-    name: string;
-    email: string;
-    avatar?: string;
-    email_verified_at: string | null;
-    two_factor_enabled?: boolean;
-    created_at: string;
-    updated_at: string;
-    [key: string]: unknown; // This allows for additional properties...
+export interface PageProps extends InertiaPageProps, SharedData {}
+
+// ─────────────────────────────
+// Pagination Type
+// ─────────────────────────────
+
+export interface PaginationProps<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
+
+// ─────────────────────────────
+// Business Models
+// ─────────────────────────────
+
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  image?: string | null;
+  description?: string | null;
+  status: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Product {
+  id: number;
+  category_id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+  price: string; // Laravel decimal(10,2) → keep as string
+  stock: number;
+  image?: string | null;
+  gallery?: string[] | null;
+  is_featured: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  category?: Category;
 }
 
 export interface Task {
@@ -48,7 +107,7 @@ export interface Task {
   description?: string;
   status: 'pending' | 'in_progress' | 'completed' | 'archived';
   priority?: 'low' | 'medium' | 'high' | string;
-  due_date?: string; // e.g., "2025-10-09"
+  due_date?: string;
   assignee?: {
     id: number;
     name: string;
@@ -57,28 +116,4 @@ export interface Task {
   };
   created_at?: string;
   updated_at?: string;
-}
-
-
-export interface PaginationProps<T = any> {
-  data: T[];
-  current_page: number;
-  last_page: number;
-  per_page: number;
-  total: number;
-}
-
-export interface PageProps {
-  auth?: {
-    user: {
-      id: number;
-      name: string;
-      email: string;
-    };
-  };
-  flash?: {
-    success?: string;
-    error?: string;
-  };
-  [key: string]: any;
 }
