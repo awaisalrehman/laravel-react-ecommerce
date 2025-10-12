@@ -37,6 +37,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('categories', CategoryController::class);
     Route::resource('products', ProductController::class);
+    Route::get('products-datatable', [TaskController::class, 'datatableJson'])->name('products.datatable');
 
     Route::resource('tasks', TaskController::class)->except(['show']);
     Route::get('tasks-datatable', [TaskController::class, 'datatableJson'])->name('tasks.datatable');
