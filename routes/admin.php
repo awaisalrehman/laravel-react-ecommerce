@@ -36,6 +36,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('categories', CategoryController::class);
+    Route::get('categories-datatable', [CategoryController::class, 'datatableJson'])->name('categories.datatable');
+
     Route::resource('products', ProductController::class);
     Route::get('products-datatable', [TaskController::class, 'datatableJson'])->name('products.datatable');
 

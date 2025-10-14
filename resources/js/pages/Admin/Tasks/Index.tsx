@@ -7,6 +7,8 @@ import { DataTable } from "@/components/data-table";
 import { columns } from "./partials/columns";
 import CreateTaskDialog from "./partials/CreateTaskDialog";
 import { index } from "@/routes/admin/tasks";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 interface TasksPageProps extends PageProps {
   initialData: Task[];
@@ -63,12 +65,7 @@ const TasksIndex: React.FC = () => {
       <div className="container mx-auto py-10 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold">Tasks</h1>
-          <button
-            onClick={() => setShowCreateDialog(true)}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition"
-          >
-            + Create Task
-          </button>
+          <Button onClick={() => setShowCreateDialog(true)}><Plus/> Create Task</Button>
         </div>
 
         <DataTable
