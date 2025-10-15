@@ -3,146 +3,97 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Task } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { Edit, Trash } from "lucide-react";
 
-/**
- * Columns for the Tasks DataTable
- */
 export const columns: ColumnDef<Task>[] = [
-  {
-    accessorKey: "title",
-    header: "Title",
-    cell: ({ row }) => {
-      const { title } = row.original;
-      return (
-        <div className="flex items-center gap-2">
-          <div className="font-medium capitalize text-foreground">
-            {title || "Untitled Task"}
-          </div>
-        </div>
-      );
+    {
+        accessorKey: "title",
+        header: "Title",
+        enableSorting: true, // ✅ server-side sorting
+        cell: ({ row }) => (
+            <div className="font-medium text-gray-900">{row.original.title}</div>
+        ),
     },
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => {
-      const status = row.original.status?.toLowerCase();
-
-      const statusColor =
-        status === "completed"
-          ? "default"
-          : status === "in_progress"
-          ? "secondary"
-          : "outline";
-
-      const label =
-        status === "completed"
-          ? "Completed"
-          : status === "in_progress"
-          ? "In Progress"
-          : "Pending";
-
-      return (
-        <Badge variant={statusColor} className="capitalize">
-          {label}
-        </Badge>
-      );
+    {
+        accessorKey: "status",
+        header: "Status",
+        enableSorting: true,
+        cell: ({ row }) => {
+            const status = row.original.status;
+            const color =
+                status === "completed"
+                    ? "bg-green-100 text-green-700"
+                    : status === "in_progress"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : "bg-gray-100 text-gray-700";
+            return (
+                <Badge className={cn("capitalize", color)}>
+                    {status.replace("_", " ")}
+                </Badge>
+            );
+        },
     },
-  },
-  {
-    accessorKey: "priority",
-    header: "Priority",
-    cell: ({ row }) => {
-      const priority = row.original.priority?.toLowerCase();
-      const variant =
-        priority === "high"
-          ? "destructive"
-          : priority === "medium"
-          ? "secondary"
-          : "outline";
-
-      return (
-        <Badge variant={variant} className="capitalize">
-          {priority || "N/A"}
-        </Badge>
-      );
+    {
+        accessorKey: "priority",
+        header: "Priority",
+        enableSorting: true,
+        cell: ({ row }) => {
+            const priority = row.original.priority;
+            const color =
+                priority === "high"
+                    ? "bg-red-100 text-red-700"
+                    : priority === "medium"
+                        ? "bg-orange-100 text-orange-700"
+                        : "bg-blue-100 text-blue-700";
+            return (
+                <Badge className={cn("capitalize", color)}>
+                    {priority}
+                </Badge>
+            );
+        },
     },
-  },
-  {
-    accessorKey: "due_date",
-    header: "Due Date",
-    cell: ({ row }) => {
-      const dateValue = row.original.due_date
-        ? new Date(row.original.due_date)
-        : null;
-
-      return (
-        <span className="text-sm text-muted-foreground">
-          {dateValue ? dateValue.toLocaleDateString() : "No due date"}
-        </span>
-      );
+    {
+        accessorKey: "due_date",
+        header: "Due Date",
+        enableSorting: true,
+        cell: ({ row }) =>
+            row.original.due_date
+                ? format(new Date(row.original.due_date), "MMM d, yyyy")
+                : "-",
     },
-  },
-  {
-    id: "actions",
-    header: "",
-    enableHiding: false,
-    cell: ({ row }) => {
-      const task = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-
-            <DropdownMenuItem
-              onClick={() =>
-                navigator.clipboard.writeText(String(task.id))
-              }
-            >
-              Copy Task ID
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem
-              onClick={() => alert(`Viewing ${task.title}`)}
-            >
-              View Details
-            </DropdownMenuItem>
-
-            <DropdownMenuItem
-              onClick={() => alert(`Editing ${task.title}`)}
-            >
-              Edit Task
-            </DropdownMenuItem>
-
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => alert(`Deleting ${task.title}`)}
-            >
-              Delete Task
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
+    {
+        accessorKey: "created_at",
+        header: "Created",
+        enableSorting: true,
+        cell: ({ row }) =>
+            row.original.created_at
+                ? format(new Date(row.original.created_at), "MMM d, yyyy")
+                : "-",
     },
-  },
+    {
+        id: "actions",
+        header: "Actions",
+        enableSorting: false,
+        cell: ({ row }) => (
+            <div className="flex items-center gap-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => alert(`Edit Task #${row.original.id}`)}
+                >
+                    <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => alert(`Delete Task #${row.original.id}`)}
+                >
+                    <Trash className="h-4 w-4" />
+                </Button>
+            </div>
+        ),
+    },
 ];

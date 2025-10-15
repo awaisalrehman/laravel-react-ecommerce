@@ -1,6 +1,6 @@
 "use client";
 
-import { DataTable } from "@/components/ss-components/data-table-04";
+import { DataTable } from "@/components/data-table";
 import AppLayout from "@/layouts/app-layout";
 import { BreadcrumbItem, Category, PageProps } from "@/types";
 import { Head, Link, usePage } from "@inertiajs/react";

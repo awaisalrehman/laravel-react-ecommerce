@@ -1,86 +1,192 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import axios from "axios";
-import { DataTable } from "@/components/ss-components/data-table-04";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  PaginationState,
+  SortingState,
+  RowSelectionState,
+} from "@tanstack/react-table";
 import AppLayout from "@/layouts/app-layout";
-import { BreadcrumbItem, Task, PageProps } from "@/types";
-import { Head, Link, usePage } from "@inertiajs/react";
+import { Head, usePage } from "@inertiajs/react";
 import { columns } from "./partials/columns";
-import { useState } from "react";
+import { BreadcrumbItem, Task, PageProps } from "@/types";
 import { index } from "@/routes/admin/tasks";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import CreateTaskDialog from "./partials/CreateTaskDialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectItem,
+  SelectTrigger,
+  SelectContent,
+  SelectValue,
+} from "@/components/ui/select";
+import { DataTable } from "@/components/data-table";
+import { DataTablePagination } from "@/components/data-table-pagination";
 
 interface TasksPageProps extends PageProps {
-    initialData: Task[];
-    initialPagination: {
-        current_page: number;
-        per_page: number;
-        total: number;
-        last_page: number;
-    };
-    filters: {
-        search?: string;
-        status?: string;
-        priority?: string;
-        sort_by?: string;
-        sort_dir?: string;
-    };
-    datatableUrl: string;
-    statusOptions: string[];
-    priorityOptions: string[];
+  datatableUrl: string;
+  statusOptions: string[];
+  priorityOptions: string[];
 }
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: "Tasks", href: index().url }];
 
 const Index: React.FC = () => {
-    const {
-        initialData,
-        initialPagination,
-        filters: initialFilters,
-        datatableUrl,
-    } = usePage<TasksPageProps>().props;
+  const { datatableUrl, statusOptions, priorityOptions } =
+    usePage<TasksPageProps>().props;
 
-    const [tasks, setTasks] = useState<Task[]>(initialData);
-    const [loading, setLoading] = useState(false);
-    const [showCreateDialog, setShowCreateDialog] = React.useState(false);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
-    // --- Fetch tasks ---
-    const fetchTasks = React.useCallback(
-        async (params: Record<string, any> = {}) => {
-            setLoading(true);
-            try {
-                const { data } = await axios.get(datatableUrl, { params });
-                setTasks(data.data);
-            } finally {
-                setLoading(false);
+  // --- Table States ---
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [totalRows, setTotalRows] = useState<number>(0);
+
+  // --- Filters ---
+  const [filters, setFilters] = useState({
+    search: "",
+    status: "",
+    priority: "",
+  });
+
+  // --- Fetch Data ---
+  const fetchTasks = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = {
+        page: pagination.pageIndex + 1,
+        per_page: pagination.pageSize,
+        sort_by: sorting[0]?.id ?? "created_at",
+        sort_dir: sorting[0]?.desc ? "desc" : "asc",
+        search: filters.search,
+        status: filters.status,
+        priority: filters.priority,
+      };
+      const { data } = await axios.get(datatableUrl, { params });
+      setTasks(data.data);
+      setTotalRows(data.pagination.total);
+    } catch (error) {
+      console.error("Failed to fetch tasks:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [datatableUrl, pagination, sorting, filters]);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  // --- React Table (moved here) ---
+  const table = useReactTable({
+    data: tasks,
+    columns,
+    manualPagination: true,
+    pageCount: Math.ceil(totalRows / pagination.pageSize),
+    manualSorting: true,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    state: { pagination, sorting, rowSelection },
+    onPaginationChange: setPagination,
+    onSortingChange: setSorting,
+    onRowSelectionChange: setRowSelection,
+  });
+
+  const selectedCount = useMemo(
+    () => Object.keys(rowSelection).length,
+    [rowSelection]
+  );
+
+  return (
+    <AppLayout breadcrumbs={breadcrumbs}>
+      <Head title="Tasks" />
+
+      <div className="container mx-auto py-10 space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-semibold">Tasks</h1>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Task
+          </Button>
+        </div>
+
+        {/* Filters Toolbar */}
+        <div className="flex flex-wrap items-center gap-4 mb-4">
+          <Input
+            placeholder="Search tasks..."
+            value={filters.search}
+            onChange={(e) =>
+              setFilters((f) => ({ ...f, search: e.target.value }))
             }
-        },
-        [datatableUrl]
-    );
+            className="max-w-sm"
+          />
+          <Select
+            value={filters.status || "all"}
+            onValueChange={(v) =>
+              setFilters((f) => ({ ...f, status: v === "all" ? "" : v }))
+            }
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Filter by Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              {statusOptions.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s.replace("_", " ")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={filters.priority || "all"}
+            onValueChange={(v) =>
+              setFilters((f) => ({ ...f, priority: v === "all" ? "" : v }))
+            }
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Filter by Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              {priorityOptions.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-    return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Tasks" />
+        {/* ✅ Data Table */}
+        <DataTable table={table} loading={loading} />
 
-            <div className="container mx-auto py-10 space-y-6">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-2xl font-semibold">Tasks</h1>
-                    <Button onClick={() => setShowCreateDialog(true)}><Plus /> Create Task</Button>
-                </div>
+        {/* ✅ Pagination */}
+        <DataTablePagination
+          table={table}
+          totalRows={totalRows}
+          selectedCount={selectedCount}
+        />
+      </div>
 
-                <DataTable columns={columns} data={tasks} loading={loading} />
-            </div>
-
-            <CreateTaskDialog
-                open={showCreateDialog}
-                onOpenChange={setShowCreateDialog}
-                onCreated={() => fetchTasks()} // ✅ refresh after creation
-            />
-        </AppLayout>
-    );
+      <CreateTaskDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onCreated={() => fetchTasks()}
+      />
+    </AppLayout>
+  );
 };
 
 export default Index;

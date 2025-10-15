@@ -11,23 +11,9 @@ use Inertia\Inertia;
 
 class TaskController extends Controller
 {
-    /**
-     * Display a listing of tasks (Inertia view)
-     */
     public function index(Request $request)
     {
-        [$items, $pagination] = $this->queryTasks($request);
-
         return Inertia::render('Admin/Tasks/Index', [
-            'initialData' => $items,
-            'initialPagination' => $pagination,
-            'filters' => [
-                'search' => $request->string('search')->toString(),
-                'status' => $request->string('status')->toString(),
-                'priority' => $request->string('priority')->toString(),
-                'sort_by' => $request->string('sort_by')->toString(),
-                'sort_dir' => $request->string('sort_dir')->toString(),
-            ],
             'datatableUrl' => route('admin.tasks.datatable'),
             'statusOptions' => ['pending', 'in_progress', 'completed'],
             'priorityOptions' => ['low', 'medium', 'high'],
@@ -35,7 +21,7 @@ class TaskController extends Controller
     }
 
     /**
-     * Datatable JSON endpoint (for async table reloads)
+     * Datatable JSON endpoint
      */
     public function datatableJson(Request $request)
     {
@@ -44,13 +30,6 @@ class TaskController extends Controller
         return response()->json([
             'data' => $items,
             'pagination' => $pagination,
-            'echo' => [
-                'search' => $request->string('search')->toString(),
-                'status' => $request->string('status')->toString(),
-                'priority' => $request->string('priority')->toString(),
-                'sort_by' => $request->string('sort_by')->toString(),
-                'sort_dir' => $request->string('sort_dir')->toString(),
-            ],
         ]);
     }
 
