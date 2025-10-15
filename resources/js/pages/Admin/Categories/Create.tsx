@@ -1,4 +1,4 @@
-import { Head, useForm } from "@inertiajs/react"
+import { Head, Link, useForm } from "@inertiajs/react"
 import { create, index, store } from "@/routes/admin/categories"
 import AppLayout from "@/layouts/app-layout"
 import { BreadcrumbItem } from "@/types"
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import React from "react"
 import StatusSelect from "@/components/status-select"
+import { ArrowLeft } from "lucide-react"
 
 interface CategoryForm {
     name: string
@@ -49,12 +50,7 @@ export default function CreateCategory() {
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="flex flex-col justify-between space-y-4 lg:flex-row lg:items-center lg:space-y-0">
                             <div className="flex items-center gap-4">
-                                <a
-                                    href={index().url}
-                                    className="inline-flex h-9 items-center justify-center rounded-md border bg-background px-3 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground"
-                                >
-                                    ← Back
-                                </a>
+                                <Link href={index().url}><Button><ArrowLeft />Back</Button></Link>
                                 <h1 className="text-2xl font-bold tracking-tight">Add Category</h1>
                             </div>
                             <div className="flex gap-2 hidden">
