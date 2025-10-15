@@ -13,21 +13,16 @@ class CategoryController extends Controller
 {
     public function index(Request $request)
     {
-        [$items, $pagination] = $this->queryCategories($request);
-
         return Inertia::render('Admin/Categories/Index', [
-            'initialData' => $items,
-            'initialPagination' => $pagination,
-            'filters' => [
-                'q' => $request->string('q')->toString(),
-                'status' => $request->string('status')->toString(),
-                'sort_by' => $request->string('sort_by')->toString(),
-                'sort_dir' => $request->string('sort_dir')->toString(),
-            ],
             'datatableUrl' => route('admin.categories.datatable'),
+            'statusOptions' => ['pending', 'in_progress', 'completed'],
+            'priorityOptions' => ['low', 'medium', 'high'],
         ]);
     }
 
+    /**
+     * Datatable JSON endpoint
+     */
     public function datatableJson(Request $request)
     {
         [$items, $pagination] = $this->queryCategories($request);
@@ -35,12 +30,6 @@ class CategoryController extends Controller
         return response()->json([
             'data' => $items,
             'pagination' => $pagination,
-            'echo' => [
-                'q' => $request->string('q')->toString(),
-                'status' => $request->string('status')->toString(),
-                'sort_by' => $request->string('sort_by')->toString(),
-                'sort_dir' => $request->string('sort_dir')->toString(),
-            ],
         ]);
     }
 
