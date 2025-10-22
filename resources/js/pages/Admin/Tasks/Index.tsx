@@ -7,6 +7,7 @@ import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
     DropdownMenuContent,
+    DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
@@ -25,11 +26,11 @@ import {
     VisibilityState,
 } from '@tanstack/react-table';
 import axios from 'axios';
-import { Columns, Download, Plus, Trash2 } from 'lucide-react';
+import { Columns, Download, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { columns } from './partials/columns';
-import CreateTaskDialog from './partials/CreateTaskDialog';
+import CreateTaskDialog from './partials/create-task-dialog';
 import { DeleteTasksDialog } from './partials/delete-tasks-dialog';
 import { FiltersToolbar } from './partials/filters-toolbar';
 
@@ -108,6 +109,11 @@ const Index: React.FC = () => {
         fetchTasks();
     }, [fetchTasks]);
 
+    // Reset column visibility to show all columns
+    const resetColumnVisibility = useCallback(() => {
+        setColumnVisibility({});
+    }, []);
+
     // React Table
     const table = useReactTable({
         data: tasks,
@@ -182,11 +188,24 @@ const Index: React.FC = () => {
         }
     };
 
+    // Check if any columns are hidden
+    const hasHiddenColumns = useMemo(() => {
+        return table
+            .getAllColumns()
+            .some(
+                (column) =>
+                    typeof column.accessorFn !== 'undefined' &&
+                    column.getCanHide() &&
+                    !column.getIsVisible(),
+            );
+    }, [table]);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Tasks" />
 
             <div className="container mx-auto space-y-6 px-4 py-10 sm:px-0">
+                {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold">Tasks</h1>
@@ -200,7 +219,7 @@ const Index: React.FC = () => {
                     </Button>
                 </div>
 
-                {/* Enhanced Filters Toolbar */}
+                {/* Filters Toolbar */}
                 <FiltersToolbar
                     filters={filters}
                     setFilters={setFilters}
@@ -211,67 +230,116 @@ const Index: React.FC = () => {
 
                 {/* Bulk Actions & Column Toggling */}
                 <div className="flex items-center justify-between">
-                    {/* Bulk Actions */}
-                    {selectedCount > 0 && (
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-600">
-                                {selectedCount} selected
-                            </span>
+                    {/* Bulk Actions - LEFT SIDE */}
+                    <div className="flex items-center gap-2">
+                        {selectedCount > 0 && (
+                            <>
+                                <span className="text-sm text-gray-600">
+                                    {selectedCount} selected
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleBulkExport}
+                                >
+                                    <Download className="mr-1 h-4 w-4" />
+                                    Export
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() =>
+                                        setShowBulkDeleteDialog(true)
+                                    }
+                                >
+                                    <Trash2 className="mr-1 h-4 w-4" />
+                                    Delete
+                                </Button>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Column Visibility - RIGHT SIDE */}
+                    <div className="flex items-center gap-2">
+                        {/* Reset Visibility Button */}
+                        {hasHiddenColumns && (
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={handleBulkExport}
+                                onClick={resetColumnVisibility}
+                                title="Reset to show all columns"
                             >
-                                <Download className="mr-1 h-4 w-4" />
-                                Export
+                                <RotateCcw className="mr-1 h-4 w-4" />
+                                Reset Columns
                             </Button>
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => setShowBulkDeleteDialog(true)}
-                            >
-                                <Trash2 className="mr-1 h-4 w-4" />
-                                Delete
-                            </Button>
-                        </div>
-                    )}
+                        )}
 
-                    {/* Column Visibility */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
-                                <Columns className="mr-1 h-4 w-4" />
-                                Columns
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>
-                                Toggle Columns
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {table
-                                .getAllColumns()
-                                .filter(
-                                    (column) =>
-                                        typeof column.accessorFn !==
-                                            'undefined' && column.getCanHide(),
-                                )
-                                .map((column) => {
-                                    return (
-                                        <DropdownMenuCheckboxItem
-                                            key={column.id}
-                                            className="capitalize"
-                                            checked={column.getIsVisible()}
-                                            onCheckedChange={(value) =>
-                                                column.toggleVisibility(!!value)
-                                            }
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <Columns className="mr-1 h-4 w-4" />
+                                    Columns
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuLabel className="flex items-center justify-between">
+                                    <span>Toggle Columns</span>
+                                    {hasHiddenColumns && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                resetColumnVisibility();
+                                            }}
+                                            className="h-6 px-2 text-xs"
                                         >
-                                            {column.id.replace('_', ' ')}
-                                        </DropdownMenuCheckboxItem>
-                                    );
-                                })}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                                            <RotateCcw className="mr-1 h-3 w-3" />
+                                            Reset
+                                        </Button>
+                                    )}
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {table
+                                    .getAllColumns()
+                                    .filter(
+                                        (column) =>
+                                            typeof column.accessorFn !==
+                                                'undefined' &&
+                                            column.getCanHide(),
+                                    )
+                                    .map((column) => {
+                                        return (
+                                            <DropdownMenuCheckboxItem
+                                                key={column.id}
+                                                checked={column.getIsVisible()}
+                                                onCheckedChange={(value) => {
+                                                    column.toggleVisibility(
+                                                        !!value,
+                                                    );
+                                                    // Don't close the dropdown
+                                                }}
+                                                className="capitalize"
+                                                onSelect={(e) =>
+                                                    e.preventDefault()
+                                                } // This prevents dropdown from closing
+                                            >
+                                                {column.id.replace('_', ' ')}
+                                            </DropdownMenuCheckboxItem>
+                                        );
+                                    })}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    onClick={resetColumnVisibility}
+                                    className="cursor-pointer"
+                                    onSelect={(e) => e.preventDefault()} // This prevents dropdown from closing
+                                >
+                                    <RotateCcw className="mr-2 h-4 w-4" />
+                                    Reset to default
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 </div>
 
                 {/* Data Table */}
