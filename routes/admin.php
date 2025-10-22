@@ -43,4 +43,6 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
 
     Route::resource('tasks', TaskController::class)->except(['show']);
     Route::get('tasks-datatable', [TaskController::class, 'datatableJson'])->name('tasks.datatable');
+    Route::post('tasks/bulk-delete', [TaskController::class, 'bulkDelete'])->name('tasks.bulk-delete');
+    Route::post('tasks/export', [TaskController::class, 'export'])->name('tasks.export');
 });

@@ -49,11 +49,21 @@ class TaskController extends Controller
             ->when($search, fn($q) =>
                 $q->where(function ($w) use ($search) {
                     $w->where('title', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%");
                 })
             )
-            ->when($status, fn($q) => $q->where('status', $status))
-            ->when($priority, fn($q) => $q->where('priority', $priority));
+            ->when($status, fn($q) => 
+                // Handle comma-separated status values
+                str_contains($status, ',') 
+                    ? $q->whereIn('status', explode(',', $status))
+                    : $q->where('status', $status)
+            )
+            ->when($priority, fn($q) => 
+                // Handle comma-separated priority values
+                str_contains($priority, ',') 
+                    ? $q->whereIn('priority', explode(',', $priority))
+                    : $q->where('priority', $priority)
+            );
 
         $sortable = ['title', 'status', 'priority', 'due_date', 'created_at'];
         if (!in_array($sortBy, $sortable)) {
@@ -137,5 +147,68 @@ class TaskController extends Controller
         return redirect()
             ->back()
             ->with('success', 'Task deleted successfully.');
+    }
+
+    /**
+     * Bulk delete tasks
+     */
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:tasks,id'
+        ]);
+
+        try {
+            Task::whereIn('id', $request->ids)->delete();
+            
+            return response()->json([
+                'message' => 'Tasks deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete tasks'
+            ], 500);
+        }
+    }
+
+    /**
+     * Export tasks
+     */
+    public function export(Request $request)
+    {
+        $request->validate([
+            'ids' => 'sometimes|array',
+            'ids.*' => 'exists:tasks,id'
+        ]);
+
+        $tasks = Task::when($request->has('ids'), function ($query) use ($request) {
+            $query->whereIn('id', $request->ids);
+        })->get();
+
+        $fileName = 'tasks-' . now()->format('Y-m-d') . '.csv';
+        
+        return response()->streamDownload(function () use ($tasks) {
+            $handle = fopen('php://output', 'w');
+            
+            // Add CSV headers
+            fputcsv($handle, ['ID', 'Title', 'Status', 'Priority', 'Due Date', 'Created At']);
+            
+            // Add data
+            foreach ($tasks as $task) {
+                fputcsv($handle, [
+                    $task->id,
+                    $task->title,
+                    $task->status,
+                    $task->priority,
+                    $task->due_date?->toDateString(),
+                    $task->created_at?->toDateTimeString(),
+                ]);
+            }
+            
+            fclose($handle);
+        }, $fileName, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 }

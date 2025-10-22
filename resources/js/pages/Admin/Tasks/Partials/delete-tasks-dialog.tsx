@@ -1,7 +1,6 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useForm } from "@inertiajs/react";
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -10,10 +9,11 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Trash } from "lucide-react";
-import { toast } from "sonner";
+} from '@/components/ui/dialog';
+import { useForm } from '@inertiajs/react';
+import { Trash } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 interface DeleteTasksDialogProps {
     tasks: { id: number; title?: string }[];
@@ -33,21 +33,30 @@ export function DeleteTasksDialog({
     const [loading, setLoading] = useState(false);
     const { delete: destroy } = useForm();
 
+    const isBulkDelete = tasks.length > 1;
+
     const handleDelete = () => {
         if (!tasks.length) return;
 
         setLoading(true);
-        destroy(route("tasks.destroy", tasks[0].id), {
-            onSuccess: () => {
-                toast.success("Task deleted successfully");
-                onSuccess?.();
-            },
-            onError: () => toast.error("Failed to delete task"),
-            onFinish: () => {
-                setLoading(false);
-                onOpenChange?.(false);
-            },
-        });
+
+        if (isBulkDelete) {
+            // Use onSuccess callback for bulk delete
+            onSuccess?.();
+        } else {
+            // Single delete using Inertia
+            destroy(route('tasks.destroy', tasks[0].id), {
+                onSuccess: () => {
+                    toast.success('Task deleted successfully');
+                    onSuccess?.();
+                },
+                onError: () => toast.error('Failed to delete task'),
+                onFinish: () => {
+                    setLoading(false);
+                    onOpenChange?.(false);
+                },
+            });
+        }
     };
 
     return (
@@ -61,14 +70,34 @@ export function DeleteTasksDialog({
             )}
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Delete Task</DialogTitle>
+                    <DialogTitle>
+                        {isBulkDelete
+                            ? `Delete ${tasks.length} Tasks`
+                            : 'Delete Task'}
+                    </DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to delete{" "}
-                        <strong>{tasks[0]?.title ?? "this task"}</strong>?
+                        {isBulkDelete ? (
+                            <>
+                                Are you sure you want to delete{' '}
+                                <strong>{tasks.length} selected tasks</strong>?
+                                This action cannot be undone.
+                            </>
+                        ) : (
+                            <>
+                                Are you sure you want to delete{' '}
+                                <strong>
+                                    {tasks[0]?.title ?? 'this task'}
+                                </strong>
+                                ? This action cannot be undone.
+                            </>
+                        )}
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange?.(false)}>
+                    <Button
+                        variant="outline"
+                        onClick={() => onOpenChange?.(false)}
+                    >
                         Cancel
                     </Button>
                     <Button
@@ -76,7 +105,9 @@ export function DeleteTasksDialog({
                         onClick={handleDelete}
                         disabled={loading}
                     >
-                        {loading ? "Deleting..." : "Confirm"}
+                        {loading
+                            ? 'Deleting...'
+                            : `Delete ${isBulkDelete ? `${tasks.length} Tasks` : 'Task'}`}
                     </Button>
                 </DialogFooter>
             </DialogContent>
