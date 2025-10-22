@@ -1,7 +1,7 @@
 'use client';
 
-import { DataTable } from '@/components/data-table';
-import { DataTablePagination } from '@/components/data-table-pagination';
+import { DataTable } from '@/components/data-table/data-table';
+import { DataTablePagination } from '@/components/data-table/data-table-pagination';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,

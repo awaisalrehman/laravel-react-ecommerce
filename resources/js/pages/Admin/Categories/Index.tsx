@@ -25,8 +25,8 @@ import {
   SelectContent,
   SelectValue,
 } from "@/components/ui/select";
-import { DataTable } from "@/components/data-table";
-import { DataTablePagination } from "@/components/data-table-pagination";
+import { DataTable } from "@/components/data-table/data-table";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: "Categories", href: index().url },

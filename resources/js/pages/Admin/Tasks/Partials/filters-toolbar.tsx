@@ -1,17 +1,22 @@
-// resources/js/pages/Admin/Tasks/partials/filters-toolbar.tsx
-import { Button } from '@/components/ui/button';
 import {
-    DropdownMenu,
-    DropdownMenuCheckboxItem,
-    DropdownMenuContent,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+    FacetedFilterOption,
+    TableCNFacetedFilter,
+} from '@/components/data-table/faceted-filter';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Task } from '@/types';
 import { Table } from '@tanstack/react-table';
-import { ChevronDown, Filter, X } from 'lucide-react';
+import {
+    AlertCircle,
+    ArrowDown,
+    ArrowRight,
+    ArrowUp,
+    CheckCircle2,
+    CirclePlus,
+    Clock,
+    Search,
+    X,
+} from 'lucide-react';
 import React from 'react';
 
 interface FiltersToolbarProps {
@@ -26,10 +31,22 @@ interface FiltersToolbarProps {
     priorityOptions: string[];
 }
 
+// Icon mappings - define these outside the component
+const statusIcons = {
+    pending: Clock,
+    in_progress: AlertCircle,
+    completed: CheckCircle2,
+};
+
+const priorityIcons = {
+    low: ArrowDown,
+    medium: ArrowRight,
+    high: ArrowUp,
+};
+
 export const FiltersToolbar: React.FC<FiltersToolbarProps> = ({
     filters,
     setFilters,
-    table,
     statusOptions,
     priorityOptions,
 }) => {
@@ -37,171 +54,100 @@ export const FiltersToolbar: React.FC<FiltersToolbarProps> = ({
         setFilters((prev: any) => ({ ...prev, search: value }));
     };
 
-    const handleStatusFilter = (value: string) => {
-        setFilters((prev: any) => ({ ...prev, status: value }));
+    const handleStatusChange = (values: string[]) => {
+        setFilters((prev: any) => ({
+            ...prev,
+            status: values.length > 0 ? values : '',
+        }));
     };
 
-    const handlePriorityFilter = (value: string) => {
-        setFilters((prev: any) => ({ ...prev, priority: value }));
+    const handlePriorityChange = (values: string[]) => {
+        setFilters((prev: any) => ({
+            ...prev,
+            priority: values.length > 0 ? values : '',
+        }));
     };
 
-    const handleMultiSelectFilter = (
-        type: 'status' | 'priority',
-        value: string,
-        checked: boolean,
-    ) => {
-        setFilters((prev: any) => {
-            const currentValues = Array.isArray(prev[type])
-                ? prev[type]
-                : prev[type]
-                  ? [prev[type]]
-                  : [];
-
-            if (checked) {
-                return { ...prev, [type]: [...currentValues, value] };
-            } else {
-                return {
-                    ...prev,
-                    [type]: currentValues.filter((v: string) => v !== value),
-                };
-            }
-        });
-    };
-
-    const clearFilters = () => {
+    const clearAllFilters = () => {
         setFilters({ search: '', status: '', priority: '' });
     };
 
     const hasActiveFilters =
         filters.search || filters.status || filters.priority;
 
-    const getSelectedLabels = (
-        type: 'status' | 'priority',
-        options: string[],
-    ) => {
-        const values = Array.isArray(filters[type])
-            ? filters[type]
-            : filters[type]
-              ? [filters[type]]
-              : [];
-        return values
-            .map((value) => options.find((opt) => opt === value) || value)
-            .join(', ');
-    };
+    // Convert options to FacetedFilterOption format with icons from props
+    const statusFilterOptions: FacetedFilterOption[] = statusOptions.map(
+        (status) => ({
+            value: status,
+            label: status.replace('_', ' '),
+            icon: statusIcons[status as keyof typeof statusIcons],
+        }),
+    );
+
+    const priorityFilterOptions: FacetedFilterOption[] = priorityOptions.map(
+        (priority) => ({
+            value: priority,
+            label: priority.charAt(0).toUpperCase() + priority.slice(1),
+            icon: priorityIcons[priority as keyof typeof priorityIcons],
+        }),
+    );
+
+    // Get current selected values as arrays
+    const selectedStatusValues = Array.isArray(filters.status)
+        ? filters.status
+        : filters.status
+          ? [filters.status]
+          : [];
+
+    const selectedPriorityValues = Array.isArray(filters.priority)
+        ? filters.priority
+        : filters.priority
+          ? [filters.priority]
+          : [];
 
     return (
         <div className="flex flex-col items-start justify-between gap-4 rounded-lg border bg-gray-50 p-4 sm:flex-row sm:items-center">
-            <div className="flex w-full flex-1 flex-col gap-3 sm:w-auto sm:flex-row">
+            <div className="flex w-full flex-1 flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
                 {/* Search Input */}
                 <div className="relative w-full sm:w-64">
                     <Input
-                        placeholder="Search tasks..."
+                        placeholder="Filter tasks..."
                         value={filters.search}
                         onChange={(e) => handleSearch(e.target.value)}
                         className="pl-9"
                     />
-                    <Filter className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-500" />
+                    <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-500" />
                 </div>
 
-                {/* Status Multi-select Dropdown */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button
-                            variant="outline"
-                            className="w-full justify-between sm:w-40"
-                        >
-                            <span className="truncate">
-                                {filters.status
-                                    ? `Status: ${getSelectedLabels('status', statusOptions)}`
-                                    : 'All Status'}
-                            </span>
-                            <ChevronDown className="h-4 w-4 opacity-50" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56">
-                        <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {statusOptions.map((status) => {
-                            const isSelected = Array.isArray(filters.status)
-                                ? filters.status.includes(status)
-                                : filters.status === status;
+                {/* Status Filter with Icon */}
+                <TableCNFacetedFilter
+                    title="Status"
+                    options={statusFilterOptions}
+                    selectedValues={selectedStatusValues}
+                    onSelectedChange={handleStatusChange}
+                    triggerIcon={CirclePlus}
+                    placeholder="Filter status..."
+                />
 
-                            return (
-                                <DropdownMenuCheckboxItem
-                                    key={status}
-                                    checked={isSelected}
-                                    onCheckedChange={(checked) =>
-                                        handleMultiSelectFilter(
-                                            'status',
-                                            status,
-                                            checked,
-                                        )
-                                    }
-                                >
-                                    <span className="capitalize">
-                                        {status.replace('_', ' ')}
-                                    </span>
-                                </DropdownMenuCheckboxItem>
-                            );
-                        })}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                {/* Priority Filter with Icon */}
+                <TableCNFacetedFilter
+                    title="Priority"
+                    options={priorityFilterOptions}
+                    selectedValues={selectedPriorityValues}
+                    onSelectedChange={handlePriorityChange}
+                    triggerIcon={CirclePlus}
+                    placeholder="Filter priority..."
+                />
 
-                {/* Priority Multi-select Dropdown */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button
-                            variant="outline"
-                            className="w-full justify-between sm:w-40"
-                        >
-                            <span className="truncate">
-                                {filters.priority
-                                    ? `Priority: ${getSelectedLabels('priority', priorityOptions)}`
-                                    : 'All Priority'}
-                            </span>
-                            <ChevronDown className="h-4 w-4 opacity-50" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56">
-                        <DropdownMenuLabel>
-                            Filter by Priority
-                        </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {priorityOptions.map((priority) => {
-                            const isSelected = Array.isArray(filters.priority)
-                                ? filters.priority.includes(priority)
-                                : filters.priority === priority;
-
-                            return (
-                                <DropdownMenuCheckboxItem
-                                    key={priority}
-                                    checked={isSelected}
-                                    onCheckedChange={(checked) =>
-                                        handleMultiSelectFilter(
-                                            'priority',
-                                            priority,
-                                            checked,
-                                        )
-                                    }
-                                >
-                                    <span className="capitalize">
-                                        {priority}
-                                    </span>
-                                </DropdownMenuCheckboxItem>
-                            );
-                        })}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Clear Filters */}
+                {/* Clear All Filters */}
                 {hasActiveFilters && (
                     <Button
                         variant="outline"
-                        onClick={clearFilters}
+                        onClick={clearAllFilters}
                         className="whitespace-nowrap"
                     >
                         <X className="mr-1 h-4 w-4" />
-                        Clear
+                        Clear All
                     </Button>
                 )}
             </div>
