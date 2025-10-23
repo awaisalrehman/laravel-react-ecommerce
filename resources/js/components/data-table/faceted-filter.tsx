@@ -25,7 +25,7 @@ export interface FacetedFilterOption {
     icon?: React.ComponentType<{ className?: string }>;
 }
 
-interface TableCNFacetedFilterProps {
+interface FacetedFilterProps {
     title: string;
     options: FacetedFilterOption[];
     selectedValues: string[];
@@ -35,7 +35,7 @@ interface TableCNFacetedFilterProps {
     className?: string;
 }
 
-export function TableCNFacetedFilter({
+export function FacetedFilter({
     title,
     options,
     selectedValues,
@@ -43,7 +43,7 @@ export function TableCNFacetedFilter({
     triggerIcon: TriggerIcon,
     placeholder,
     className,
-}: TableCNFacetedFilterProps) {
+}: FacetedFilterProps) {
     const [open, setOpen] = React.useState(false);
 
     const handleSelect = (value: string) => {

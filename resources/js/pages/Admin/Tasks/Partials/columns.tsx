@@ -5,10 +5,13 @@ import { cn } from '@/lib/utils';
 import { Task } from '@/types';
 import { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { Edit } from 'lucide-react';
-import { DeleteTasksDialog } from './delete-tasks-dialog';
+import { Edit, Trash2 } from 'lucide-react';
 
-export const columns: ColumnDef<Task>[] = [
+interface ColumnsProps {
+    onSingleDeleteClick: (task: Task) => void;
+}
+
+export const columns = ({ onSingleDeleteClick }: ColumnsProps): ColumnDef<Task>[] => [
     {
         id: 'select',
         header: ({ table }) => (
@@ -17,9 +20,7 @@ export const columns: ColumnDef<Task>[] = [
                     table.getIsAllPageRowsSelected() ||
                     (table.getIsSomePageRowsSelected() && 'indeterminate')
                 }
-                onCheckedChange={(value) =>
-                    table.toggleAllPageRowsSelected(!!value)
-                }
+                onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
                 aria-label="Select all"
             />
         ),
@@ -106,7 +107,13 @@ export const columns: ColumnDef<Task>[] = [
                     >
                         <Edit className="h-4 w-4" />
                     </Button>
-                    <DeleteTasksDialog tasks={[task]} showTrigger />
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => onSingleDeleteClick(task)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
                 </div>
             );
         },

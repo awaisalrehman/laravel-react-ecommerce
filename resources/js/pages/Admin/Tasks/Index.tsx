@@ -26,7 +26,14 @@ import {
     VisibilityState,
 } from '@tanstack/react-table';
 import axios from 'axios';
-import { Columns, Download, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import {
+    ChevronsUpDown,
+    Download,
+    Plus,
+    RotateCcw,
+    Settings2,
+    Trash2,
+} from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { columns } from './partials/columns';
@@ -36,8 +43,8 @@ import { FiltersToolbar } from './partials/filters-toolbar';
 
 interface TasksPageProps extends PageProps {
     datatableUrl: string;
-    statusOptions: string[];
-    priorityOptions: string[];
+    statusOptions: Record<string, string>;
+    priorityOptions: Record<string, string>;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Tasks', href: index().url }];
@@ -50,6 +57,8 @@ const Index: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+    const [showSingleDeleteDialog, setShowSingleDeleteDialog] = useState(false);
+    const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
     // Table States
     const [pagination, setPagination] = useState<PaginationState>({
@@ -58,9 +67,7 @@ const Index: React.FC = () => {
     });
     const [sorting, setSorting] = useState<SortingState>([]);
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-        {},
-    );
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [totalRows, setTotalRows] = useState<number>(0);
 
     // Filters
@@ -74,7 +81,6 @@ const Index: React.FC = () => {
     const fetchTasks = useCallback(async () => {
         setLoading(true);
         try {
-            // Convert array filters to comma-separated strings for API
             const apiFilters = {
                 search: filters.search,
                 status: Array.isArray(filters.status)
@@ -104,59 +110,87 @@ const Index: React.FC = () => {
         }
     }, [datatableUrl, pagination, sorting, filters]);
 
-    // Initial fetch and when dependencies change
     useEffect(() => {
         fetchTasks();
     }, [fetchTasks]);
 
-    // Reset column visibility to show all columns
-    const resetColumnVisibility = useCallback(() => {
-        setColumnVisibility({});
-    }, []);
+    const resetColumnVisibility = useCallback(() => setColumnVisibility({}), []);
 
-    // React Table
+    // Pass the single delete trigger into columns
+    const tableColumns = useMemo(
+        () =>
+            columns({
+                onSingleDeleteClick: (task) => {
+                    setTaskToDelete(task);
+                    setShowSingleDeleteDialog(true);
+                },
+            }),
+        [],
+    );
+
     const table = useReactTable({
         data: tasks,
-        columns,
+        columns: tableColumns,
         manualPagination: true,
-        pageCount: Math.ceil(totalRows / pagination.pageSize),
         manualSorting: true,
+        pageCount: Math.ceil(totalRows / pagination.pageSize),
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
-        state: {
-            pagination,
-            sorting,
-            rowSelection,
-            columnVisibility,
-        },
+        state: { pagination, sorting, rowSelection, columnVisibility },
         onPaginationChange: setPagination,
         onSortingChange: setSorting,
         onRowSelectionChange: setRowSelection,
         onColumnVisibilityChange: setColumnVisibility,
     });
 
-    // Bulk Actions
     const selectedRows = table.getFilteredSelectedRowModel().rows;
-    const selectedCount = selectedRows.length;
     const selectedTasks = useMemo(
         () => selectedRows.map((row) => row.original),
         [selectedRows],
     );
+    const selectedCount = selectedTasks.length;
 
+    // Single Task Delete
+    const handleSingleDelete = async () => {
+        if (!taskToDelete) return;
+        setLoading(true);
+        try {
+            const { destroy: getDestroyRoute } = await import(
+                '@/routes/admin/tasks'
+            );
+            const deleteUrl = getDestroyRoute(taskToDelete.id).url;
+            await axios.delete(deleteUrl);
+            toast.success('Task deleted successfully');
+            await fetchTasks();
+            setShowSingleDeleteDialog(false);
+            setTaskToDelete(null);
+        } catch (error) {
+            console.error('Failed to delete task:', error);
+            toast.error('Failed to delete task');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Bulk Delete
     const handleBulkDelete = async () => {
+        setLoading(true);
         try {
             const taskIds = selectedTasks.map((task) => task.id);
             await axios.post('/admin/tasks/bulk-delete', { ids: taskIds });
             toast.success(`Deleted ${selectedTasks.length} tasks successfully`);
             table.resetRowSelection();
-            fetchTasks();
+            await fetchTasks();
             setShowBulkDeleteDialog(false);
         } catch (error) {
             console.error('Failed to delete tasks:', error);
             toast.error('Failed to delete tasks');
+        } finally {
+            setLoading(false);
         }
     };
 
+    // Export
     const handleBulkExport = async () => {
         try {
             const taskIds = selectedTasks.map((task) => task.id);
@@ -166,7 +200,6 @@ const Index: React.FC = () => {
                 { responseType: 'blob' },
             );
 
-            // Create download link
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
@@ -188,17 +221,18 @@ const Index: React.FC = () => {
         }
     };
 
-    // Check if any columns are hidden
-    const hasHiddenColumns = useMemo(() => {
-        return table
-            .getAllColumns()
-            .some(
-                (column) =>
-                    typeof column.accessorFn !== 'undefined' &&
-                    column.getCanHide() &&
-                    !column.getIsVisible(),
-            );
-    }, [table]);
+    const hasHiddenColumns = useMemo(
+        () =>
+            table
+                .getAllColumns()
+                .some(
+                    (column) =>
+                        typeof column.accessorFn !== 'undefined' &&
+                        column.getCanHide() &&
+                        !column.getIsVisible(),
+                ),
+        [table],
+    );
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -228,9 +262,8 @@ const Index: React.FC = () => {
                     priorityOptions={priorityOptions}
                 />
 
-                {/* Bulk Actions & Column Toggling */}
+                {/* Bulk Actions */}
                 <div className="flex items-center justify-between">
-                    {/* Bulk Actions - LEFT SIDE */}
                     <div className="flex items-center gap-2">
                         {selectedCount > 0 && (
                             <>
@@ -259,9 +292,8 @@ const Index: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Column Visibility - RIGHT SIDE */}
+                    {/* Column Controls */}
                     <div className="flex items-center gap-2">
-                        {/* Reset Visibility Button */}
                         {hasHiddenColumns && (
                             <Button
                                 variant="outline"
@@ -277,8 +309,9 @@ const Index: React.FC = () => {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" size="sm">
-                                    <Columns className="mr-1 h-4 w-4" />
-                                    Columns
+                                    <Settings2 className="mr-1 h-4 w-4" />
+                                    View
+                                    <ChevronsUpDown className="ml-1 h-4 w-4 text-gray-400" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
@@ -308,31 +341,24 @@ const Index: React.FC = () => {
                                                 'undefined' &&
                                             column.getCanHide(),
                                     )
-                                    .map((column) => {
-                                        return (
-                                            <DropdownMenuCheckboxItem
-                                                key={column.id}
-                                                checked={column.getIsVisible()}
-                                                onCheckedChange={(value) => {
-                                                    column.toggleVisibility(
-                                                        !!value,
-                                                    );
-                                                    // Don't close the dropdown
-                                                }}
-                                                className="capitalize"
-                                                onSelect={(e) =>
-                                                    e.preventDefault()
-                                                } // This prevents dropdown from closing
-                                            >
-                                                {column.id.replace('_', ' ')}
-                                            </DropdownMenuCheckboxItem>
-                                        );
-                                    })}
+                                    .map((column) => (
+                                        <DropdownMenuCheckboxItem
+                                            key={column.id}
+                                            checked={column.getIsVisible()}
+                                            onCheckedChange={(value) =>
+                                                column.toggleVisibility(!!value)
+                                            }
+                                            onSelect={(e) => e.preventDefault()}
+                                            className="capitalize"
+                                        >
+                                            {column.id.replace('_', ' ')}
+                                        </DropdownMenuCheckboxItem>
+                                    ))}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     onClick={resetColumnVisibility}
+                                    onSelect={(e) => e.preventDefault()}
                                     className="cursor-pointer"
-                                    onSelect={(e) => e.preventDefault()} // This prevents dropdown from closing
                                 >
                                     <RotateCcw className="mr-2 h-4 w-4" />
                                     Reset to default
@@ -363,12 +389,23 @@ const Index: React.FC = () => {
                 }}
             />
 
-            {/* Bulk Delete Confirmation Dialog */}
+            {/* Bulk Delete */}
             <DeleteTasksDialog
                 tasks={selectedTasks}
                 open={showBulkDeleteDialog}
                 onOpenChange={setShowBulkDeleteDialog}
                 onSuccess={handleBulkDelete}
+                loading={loading}
+                showTrigger={false}
+            />
+
+            {/* Single Delete */}
+            <DeleteTasksDialog
+                tasks={taskToDelete ? [taskToDelete] : []}
+                open={showSingleDeleteDialog}
+                onOpenChange={setShowSingleDeleteDialog}
+                onSuccess={handleSingleDelete}
+                loading={loading}
                 showTrigger={false}
             />
         </AppLayout>

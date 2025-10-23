@@ -13,10 +13,22 @@ class TaskController extends Controller
 {
     public function index(Request $request)
     {
+        $statusOptions = [
+            'pending' => 'Pending',
+            'in_progress' => 'In Progress',
+            'completed' => 'Completed',
+        ];
+
+        $priorityOptions = [
+            'low' => 'Low',
+            'medium' => 'Medium',
+            'high' => 'High',
+        ];
+
         return Inertia::render('Admin/Tasks/Index', [
-            'datatableUrl' => route('admin.tasks.datatable'),
-            'statusOptions' => ['pending', 'in_progress', 'completed'],
-            'priorityOptions' => ['low', 'medium', 'high'],
+            'datatableUrl'   => route('admin.tasks.datatable'),
+            'statusOptions'  => $statusOptions,
+            'priorityOptions'=> $priorityOptions,
         ]);
     }
 
@@ -144,9 +156,7 @@ class TaskController extends Controller
     {
         $task->delete();
 
-        return redirect()
-            ->back()
-            ->with('success', 'Task deleted successfully.');
+        return response()->noContent();
     }
 
     /**

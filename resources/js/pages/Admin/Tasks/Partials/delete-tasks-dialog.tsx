@@ -10,17 +10,16 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { useForm } from '@inertiajs/react';
 import { Trash } from 'lucide-react';
-import { useState } from 'react';
-import { toast } from 'sonner';
+import { Task } from '@/types';
 
 interface DeleteTasksDialogProps {
-    tasks: { id: number; title?: string }[];
+    tasks: Task[];
     showTrigger?: boolean;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
     onSuccess?: () => void;
+    loading?: boolean;
 }
 
 export function DeleteTasksDialog({
@@ -29,34 +28,15 @@ export function DeleteTasksDialog({
     open,
     onOpenChange,
     onSuccess,
+    loading = false,
 }: DeleteTasksDialogProps) {
-    const [loading, setLoading] = useState(false);
-    const { delete: destroy } = useForm();
+    if (tasks.length === 0) return null;
 
     const isBulkDelete = tasks.length > 1;
 
-    const handleDelete = () => {
-        if (!tasks.length) return;
-
-        setLoading(true);
-
-        if (isBulkDelete) {
-            // Use onSuccess callback for bulk delete
-            onSuccess?.();
-        } else {
-            // Single delete using Inertia
-            destroy(route('tasks.destroy', tasks[0].id), {
-                onSuccess: () => {
-                    toast.success('Task deleted successfully');
-                    onSuccess?.();
-                },
-                onError: () => toast.error('Failed to delete task'),
-                onFinish: () => {
-                    setLoading(false);
-                    onOpenChange?.(false);
-                },
-            });
-        }
+    const handleConfirm = async () => {
+        await onSuccess?.();
+        onOpenChange?.(false);
     };
 
     return (
@@ -85,9 +65,7 @@ export function DeleteTasksDialog({
                         ) : (
                             <>
                                 Are you sure you want to delete{' '}
-                                <strong>
-                                    {tasks[0]?.title ?? 'this task'}
-                                </strong>
+                                <strong>{tasks[0]?.title ?? 'this task'}</strong>
                                 ? This action cannot be undone.
                             </>
                         )}
@@ -97,17 +75,20 @@ export function DeleteTasksDialog({
                     <Button
                         variant="outline"
                         onClick={() => onOpenChange?.(false)}
+                        disabled={loading}
                     >
                         Cancel
                     </Button>
                     <Button
                         variant="destructive"
-                        onClick={handleDelete}
+                        onClick={handleConfirm}
                         disabled={loading}
                     >
                         {loading
                             ? 'Deleting...'
-                            : `Delete ${isBulkDelete ? `${tasks.length} Tasks` : 'Task'}`}
+                            : isBulkDelete
+                              ? `Delete ${tasks.length} Tasks`
+                              : 'Delete Task'}
                     </Button>
                 </DialogFooter>
             </DialogContent>
