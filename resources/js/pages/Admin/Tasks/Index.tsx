@@ -2,16 +2,6 @@
 
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTablePagination } from '@/components/data-table/data-table-pagination';
-import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuCheckboxItem,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import AppLayout from '@/layouts/app-layout';
 import { index } from '@/routes/admin/tasks';
 import { BreadcrumbItem, PageProps, Task } from '@/types';
@@ -26,20 +16,15 @@ import {
     VisibilityState,
 } from '@tanstack/react-table';
 import axios from 'axios';
-import {
-    ChevronsUpDown,
-    Download,
-    Plus,
-    RotateCcw,
-    Settings2,
-    Trash2,
-} from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { columns } from './partials/columns';
-import CreateTaskDialog from './partials/create-task-dialog';
+import TaskFormDialog from './partials/task-form-dialog';
 import { DeleteTasksDialog } from './partials/delete-tasks-dialog';
 import { FiltersToolbar } from './partials/filters-toolbar';
+import TaskHeader from './partials/task-header';
+import TaskBulkActions from './partials/task-bulk-actions';
+import ColumnVisibilityControl from './partials/column-visibility-controls';
 
 interface TasksPageProps extends PageProps {
     datatableUrl: string;
@@ -59,6 +44,7 @@ const Index: React.FC = () => {
     const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
     const [showSingleDeleteDialog, setShowSingleDeleteDialog] = useState(false);
     const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+    const [editingTask, setEditingTask] = useState<Task | null>(null);
 
     // Table States
     const [pagination, setPagination] = useState<PaginationState>({
@@ -116,10 +102,13 @@ const Index: React.FC = () => {
 
     const resetColumnVisibility = useCallback(() => setColumnVisibility({}), []);
 
-    // Pass the single delete trigger into columns
     const tableColumns = useMemo(
         () =>
             columns({
+                onEditClick: (task) => {
+                    setEditingTask(task);
+                    setShowCreateDialog(true);
+                },
                 onSingleDeleteClick: (task) => {
                     setTaskToDelete(task);
                     setShowSingleDeleteDialog(true);
@@ -240,18 +229,7 @@ const Index: React.FC = () => {
 
             <div className="container mx-auto space-y-6 px-4 py-10 sm:px-0">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold">Tasks</h1>
-                        <p className="mt-1 text-sm text-gray-600">
-                            Manage and track your team's tasks
-                        </p>
-                    </div>
-                    <Button onClick={() => setShowCreateDialog(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create Task
-                    </Button>
-                </div>
+                <TaskHeader onCreateClick={() => setShowCreateDialog(true)} />
 
                 {/* Filters Toolbar */}
                 <FiltersToolbar
@@ -262,109 +240,23 @@ const Index: React.FC = () => {
                     priorityOptions={priorityOptions}
                 />
 
-                {/* Bulk Actions */}
+                {/* Bulk Actions + Column Controls */}
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        {selectedCount > 0 && (
-                            <>
-                                <span className="text-sm text-gray-600">
-                                    {selectedCount} selected
-                                </span>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleBulkExport}
-                                >
-                                    <Download className="mr-1 h-4 w-4" />
-                                    Export
-                                </Button>
-                                <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() =>
-                                        setShowBulkDeleteDialog(true)
-                                    }
-                                >
-                                    <Trash2 className="mr-1 h-4 w-4" />
-                                    Delete
-                                </Button>
-                            </>
-                        )}
-                    </div>
+                    <TaskBulkActions
+                        selectedCount={selectedCount}
+                        selectedTasks={selectedTasks}
+                        onExport={handleBulkExport}
+                        onBulkDeleteTrigger={() => setShowBulkDeleteDialog(true)}
+                        hasHiddenColumns={hasHiddenColumns}
+                        onResetColumns={resetColumnVisibility}
+                    />
 
-                    {/* Column Controls */}
                     <div className="flex items-center gap-2">
-                        {hasHiddenColumns && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={resetColumnVisibility}
-                                title="Reset to show all columns"
-                            >
-                                <RotateCcw className="mr-1 h-4 w-4" />
-                                Reset Columns
-                            </Button>
-                        )}
-
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                    <Settings2 className="mr-1 h-4 w-4" />
-                                    View
-                                    <ChevronsUpDown className="ml-1 h-4 w-4 text-gray-400" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuLabel className="flex items-center justify-between">
-                                    <span>Toggle Columns</span>
-                                    {hasHiddenColumns && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                resetColumnVisibility();
-                                            }}
-                                            className="h-6 px-2 text-xs"
-                                        >
-                                            <RotateCcw className="mr-1 h-3 w-3" />
-                                            Reset
-                                        </Button>
-                                    )}
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                {table
-                                    .getAllColumns()
-                                    .filter(
-                                        (column) =>
-                                            typeof column.accessorFn !==
-                                                'undefined' &&
-                                            column.getCanHide(),
-                                    )
-                                    .map((column) => (
-                                        <DropdownMenuCheckboxItem
-                                            key={column.id}
-                                            checked={column.getIsVisible()}
-                                            onCheckedChange={(value) =>
-                                                column.toggleVisibility(!!value)
-                                            }
-                                            onSelect={(e) => e.preventDefault()}
-                                            className="capitalize"
-                                        >
-                                            {column.id.replace('_', ' ')}
-                                        </DropdownMenuCheckboxItem>
-                                    ))}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    onClick={resetColumnVisibility}
-                                    onSelect={(e) => e.preventDefault()}
-                                    className="cursor-pointer"
-                                >
-                                    <RotateCcw className="mr-2 h-4 w-4" />
-                                    Reset to default
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <ColumnVisibilityControl
+                            table={table}
+                            resetColumnVisibility={resetColumnVisibility}
+                            hasHiddenColumns={hasHiddenColumns}
+                        />
                     </div>
                 </div>
 
@@ -380,13 +272,17 @@ const Index: React.FC = () => {
             </div>
 
             {/* Dialogs */}
-            <CreateTaskDialog
+            <TaskFormDialog
                 open={showCreateDialog}
-                onOpenChange={setShowCreateDialog}
-                onCreated={async () => {
+                onOpenChange={(open) => {
+                    setShowCreateDialog(open);
+                    if (!open) setEditingTask(null);
+                }}
+                onSuccess={async () => {
                     await fetchTasks();
                     setShowCreateDialog(false);
                 }}
+                task={editingTask}
             />
 
             {/* Bulk Delete */}
