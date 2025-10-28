@@ -100,6 +100,10 @@ const Index: React.FC = () => {
         fetchTasks();
     }, [fetchTasks]);
 
+    useEffect(() => {
+        table.resetRowSelection();
+    }, [pagination.pageIndex, pagination.pageSize, sorting, filters]);
+
     const resetColumnVisibility = useCallback(() => setColumnVisibility({}), []);
 
     const tableColumns = useMemo(

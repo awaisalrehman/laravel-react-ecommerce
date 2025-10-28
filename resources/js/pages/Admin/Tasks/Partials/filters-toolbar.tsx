@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     FacetedFilterOption,
-    FacetedFilter as TableCNFacetedFilter,
+    FacetedFilter,
 } from '@/components/data-table/faceted-filter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -124,7 +124,7 @@ export const FiltersToolbar: React.FC<FiltersToolbarProps> = ({
                 </div>
 
                 {/* Status Filter */}
-                <TableCNFacetedFilter
+                <FacetedFilter
                     title="Status"
                     options={statusFilterOptions}
                     selectedValues={selectedStatusValues}
@@ -134,7 +134,7 @@ export const FiltersToolbar: React.FC<FiltersToolbarProps> = ({
                 />
 
                 {/* Priority Filter */}
-                <TableCNFacetedFilter
+                <FacetedFilter
                     title="Priority"
                     options={priorityFilterOptions}
                     selectedValues={selectedPriorityValues}
