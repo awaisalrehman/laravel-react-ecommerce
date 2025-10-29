@@ -1,111 +1,129 @@
-"use client";
+import ImageCell from '@/components/data-table/image-cell';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
+import { Category } from '@/types';
+import { ColumnDef } from '@tanstack/react-table';
+import { format } from 'date-fns';
+import { Edit, Trash2 } from 'lucide-react';
+import React from 'react';
 
-import { ColumnDef } from "@tanstack/react-table";
-import { Category } from "@/types";
-import { Badge } from "@/components/ui/badge";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+/**
+ * Small presentational components for concise cells.
+ */
+const StatusBadge: React.FC<{ status: number }> = ({ status }) => {
+    const isActive = status === 1;
+    const color = isActive
+        ? 'bg-green-100 text-green-700'
+        : 'bg-gray-100 text-gray-700';
+    return (
+        <Badge className={cn('capitalize', color)}>
+            {isActive ? 'Active' : 'Inactive'}
+        </Badge>
+    );
+};
 
-export const columns: ColumnDef<Category>[] = [
+const ActionsCell: React.FC<{
+    category: Category;
+    onEditClick: (category: Category) => void;
+    onSingleDeleteClick: (category: Category) => void;
+}> = ({ category, onEditClick, onSingleDeleteClick }) => (
+    <div className="flex items-center gap-2">
+        <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onEditClick(category)}
+        >
+            <Edit className="h-4 w-4" />
+        </Button>
+        <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => onSingleDeleteClick(category)}
+        >
+            <Trash2 className="h-4 w-4" />
+        </Button>
+    </div>
+);
+
+export type ColumnsProps = {
+    onEditClick: (category: Category) => void;
+    onSingleDeleteClick: (category: Category) => void;
+};
+
+export const columns = ({
+    onEditClick,
+    onSingleDeleteClick,
+}: ColumnsProps): ColumnDef<Category>[] => [
     {
-        accessorKey: "name",
-        header: "Category Name",
+        id: 'select',
+        header: ({ table }) => (
+            <Checkbox
+                checked={
+                    table.getIsAllPageRowsSelected() ||
+                    (table.getIsSomePageRowsSelected() && 'indeterminate')
+                }
+                onCheckedChange={(value) =>
+                    table.toggleAllPageRowsSelected(!!value)
+                }
+                aria-label="Select all"
+            />
+        ),
+        cell: ({ row }) => (
+            <Checkbox
+                checked={row.getIsSelected()}
+                onCheckedChange={(value) => row.toggleSelected(!!value)}
+                aria-label="Select row"
+            />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+    },
+    {
+        accessorKey: 'name',
+        header: 'Category Name',
         cell: ({ row }) => {
             const { name, image } = row.original;
-            const imagePath = image ? `/${image}` : '/images/placeholder.png';
             return (
                 <div className="flex items-center gap-4">
-                    <figure className="rounded-lg border overflow-hidden">
-                        <img
-                            src={imagePath}
-                            alt={name}
-                            width={48}
-                            height={48}
-                            loading="lazy"
-                            className="object-cover w-12 h-12"
-                        />
-                    </figure>
-                    <div className="capitalize font-medium">{name}</div>
+                    <ImageCell src={image} alt={name} size={48} />
+                    <div className="font-medium capitalize">{name}</div>
                 </div>
             );
         },
     },
     {
-        accessorKey: "slug",
-        header: "Slug",
+        accessorKey: 'slug',
+        header: 'Slug',
         cell: ({ row }) => (
-            <span className="text-muted-foreground text-sm">
-                {row.original.slug}
-            </span>
+            <div className="text-gray-700">{row.original.slug}</div>
         ),
     },
     {
-        accessorKey: "status",
-        header: "Status",
-        cell: ({ row }) => {
-            const status = Number(row.original.status);
-            return (
-                <Badge
-                    variant={status === 1 ? "default" : "destructive"}
-                >
-                    {status === 1 ? "Active" : "Inactive"}
-                </Badge>
-            );
-        },
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
-        accessorKey: "created_at",
-        header: "Created At",
-        cell: ({ row }) => {
-            const date = new Date(row.original.created_at);
-            return (
-                <span className="text-sm text-muted-foreground">
-                    {date.toLocaleDateString()}
-                </span>
-            );
-        },
+        accessorKey: 'created_at',
+        header: 'Created',
+        cell: ({ row }) =>
+            row.original.created_at
+                ? format(new Date(row.original.created_at), 'MMM d, yyyy')
+                : '-',
     },
     {
-        id: "actions",
-        header: "",
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => (
+            <ActionsCell
+                category={row.original}
+                onEditClick={onEditClick}
+                onSingleDeleteClick={onSingleDeleteClick}
+            />
+        ),
+        enableSorting: false,
         enableHiding: false,
-        cell: ({ row }) => {
-            const category = row.original;
-
-            return (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem
-                            onClick={() => navigator.clipboard.writeText(String(category.id))}
-                        >
-                            Copy Category ID
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => alert(`Viewing ${category.name}`)}>
-                            View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                            Delete
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            );
-        },
     },
 ];

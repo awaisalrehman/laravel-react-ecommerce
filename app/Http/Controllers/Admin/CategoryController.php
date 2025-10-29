@@ -3,25 +3,30 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\CategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class CategoryController extends Controller
 {
+    /**
+     * Display the categories page.
+     */
     public function index(Request $request)
     {
+        $statusOptions = [
+            'in_active' => 'In Active',
+            'active' => 'Active',
+        ];
+
         return Inertia::render('Admin/Categories/Index', [
             'datatableUrl' => route('admin.categories.datatable'),
-            'statusOptions' => ['pending', 'in_progress', 'completed'],
-            'priorityOptions' => ['low', 'medium', 'high'],
+            'statusOptions'  => $statusOptions,
         ]);
     }
 
     /**
-     * Datatable JSON endpoint
+     * Datatable JSON endpoint.
      */
     public function datatableJson(Request $request)
     {
@@ -33,45 +38,67 @@ class CategoryController extends Controller
         ]);
     }
 
+    /**
+     * Central query builder for reusable filtering, sorting, pagination.
+     */
     protected function queryCategories(Request $request): array
     {
-        $q = $request->string('q')->toString();
-        $status = $request->string('status')->toString();
-        $sortBy = $request->string('sort_by')->toString() ?: 'created_at';
-        $sortDir = strtolower($request->string('sort_dir')->toString() ?: 'desc');
-        $perPage = (int) $request->integer('per_page') ?: 10;
+        $search   = $request->string('search')->toString();
+        $status   = $request->string('status')->toString();
+        $sortBy   = $request->string('sort_by')->toString() ?: 'created_at';
+        $sortDir  = strtolower($request->string('sort_dir')->toString() ?: 'desc');
+        $perPage  = (int) $request->integer('per_page') ?: 10;
+
+        $statusMap = [
+            'active' => 1,
+            'in_active' => 0,
+        ];
 
         $query = Category::query()
-            ->when($q, fn($qry) => $qry->where(function($w) use ($q) {
-                $w->where('name', 'like', "%{$q}%")
-                  ->orWhere('slug', 'like', "%{$q}%");
-            }))
-            ->when($status, fn($qry) => $qry->where('status', $status));
+            ->when($search, fn($q) =>
+                $q->where(function ($w) use ($search) {
+                    $w->where('name', 'like', "%{$search}%")
+                    ->orWhere('slug', 'like', "%{$search}%");
+                })
+            )
+            ->when($status, function ($q) use ($status, $statusMap) {
+                $statuses = explode(',', $status);
+                $statuses = array_map(fn($s) => $statusMap[$s] ?? null, $statuses);
+                $statuses = array_filter($statuses, fn($s) => !is_null($s));
 
-        $sortable = ['name', 'slug', 'status', 'created_at'];
+                if (!empty($statuses)) {
+                    $q->whereIn('status', $statuses);
+                }
+            });
+
+        $sortable = ['name', 'slug', 'created_at'];
         if (!in_array($sortBy, $sortable)) {
             $sortBy = 'created_at';
         }
+
         $sortDir = $sortDir === 'asc' ? 'asc' : 'desc';
 
-        $paginator = $query->orderBy($sortBy, $sortDir)->paginate($perPage)->withQueryString();
+        $paginator = $query->orderBy($sortBy, $sortDir)
+            ->paginate($perPage)
+            ->withQueryString();
 
-        $items = $paginator->getCollection()->map(function (Category $c) {
+        $items = $paginator->getCollection()->map(function (Category $category) {
             return [
-                'id' => $c->id,
-                'name' => $c->name,
-                'slug' => $c->slug,
-                'image' => $c->image,
-                'status' => $c->status,
-                'created_at' => $c->created_at?->toDateTimeString(),
+                'id'          => $category->id,
+                'name'        => $category->name,
+                'slug'        => $category->slug,
+                'description' => $category->description,
+                'image'       => $category->image,
+                'status'      => $category->status,
+                'created_at'  => $category->created_at?->toDateTimeString(),
             ];
         })->values();
 
         $pagination = [
             'current_page' => $paginator->currentPage(),
-            'per_page' => $paginator->perPage(),
-            'total' => $paginator->total(),
-            'last_page' => $paginator->lastPage(),
+            'per_page'     => $paginator->perPage(),
+            'total'        => $paginator->total(),
+            'last_page'    => $paginator->lastPage(),
         ];
 
         return [$items, $pagination];
@@ -79,87 +106,114 @@ class CategoryController extends Controller
 
     public function create()
     {
-        return Inertia::render('Admin/Categories/Create', [
-            'mode' => 'create',
-            'category' => null,
-            'submitUrl' => route('admin.categories.store'),
-        ]);
+        return Inertia::render('Admin/Categories/Create');
     }
 
-    public function store(CategoryRequest $request)
+    /**
+     * Store a newly created category.
+     */
+    public function store(Request $request)
     {
-        $data = $request->validated();
-        $slug = $data['slug'] ?? Str::slug($data['name']);
-
-        // Ensure slug uniqueness
-        $base = $slug;
-        $i = 1;
-        while (Category::where('slug', $slug)->exists()) {
-            $slug = "{$base}-{$i}";
-            $i++;
-        }
-
-        Category::create([
-            'name' => $data['name'],
-            'slug' => $slug,
-            'status' => $data['status'],
+        $validated = $request->validate([
+            'name'        => 'required|string|max:255',
+            'slug'        => 'nullable|string|max:255|unique:categories,slug',
+            'description' => 'nullable|string',
+            'image'       => 'nullable|string',
         ]);
 
-        return redirect()->route('categories.index')->with('success', 'Category created successfully.');
+        Category::create($validated);
+
+        return redirect()
+            ->route('admin.categories.index')
+            ->with('success', 'Category created successfully.');
     }
 
-    public function edit(Category $category)
+    /**
+     * Update an existing category.
+     */
+    public function update(Request $request, Category $category)
     {
-        return Inertia::render('Admin/Categories/Edit', [
-            'mode' => 'edit',
-            'category' => [
-                'id' => $category->id,
-                'name' => $category->name,
-                'slug' => $category->slug,
-                'status' => $category->status,
-            ],
-            'submitUrl' => route('categories.update', $category),
-        ]);
-    }
-
-    public function update(CategoryRequest $request, Category $category)
-    {
-        $data = $request->validated();
-        $slug = $data['slug'] ?: Str::slug($data['name']);
-
-        if ($slug !== $category->slug) {
-            $base = $slug;
-            $i = 1;
-            while (Category::where('slug', $slug)->where('id', '<>', $category->id)->exists()) {
-                $slug = "{$base}-{$i}";
-                $i++;
-            }
-        }
-
-        $category->update([
-            'name' => $data['name'],
-            'slug' => $slug,
-            'status' => $data['status'],
+        $validated = $request->validate([
+            'name'        => 'required|string|max:255',
+            'slug'        => 'nullable|string|max:255|unique:categories,slug,' . $category->id,
+            'description' => 'nullable|string',
+            'image'       => 'nullable|string',
         ]);
 
-        return redirect()->route('categories.index')->with('success', 'Category updated successfully.');
+        $category->update($validated);
+
+        return redirect()
+            ->back()
+            ->with('success', 'Category updated successfully.');
     }
 
-    public function show(Category $category)
-    {
-        return Inertia::render('Admin/Categories/Show', [
-            'category' => [
-                'id' => $category->id,
-                'name' => $category->name,
-                'slug' => $category->slug,
-                'status' => $category->status,
-            ],
-        ]);
-    }
-
+    /**
+     * Delete a single category.
+     */
     public function destroy(Category $category)
     {
         $category->delete();
-        return redirect()->route('categories.index')->with('success', 'Category deleted successfully.');
+
+        return response()->noContent();
+    }
+
+    /**
+     * Bulk delete categories.
+     */
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:categories,id',
+        ]);
+
+        try {
+            Category::whereIn('id', $request->ids)->delete();
+
+            return response()->json([
+                'message' => 'Categories deleted successfully.',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete categories.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Export categories as CSV.
+     */
+    public function export(Request $request)
+    {
+        $request->validate([
+            'ids' => 'sometimes|array',
+            'ids.*' => 'exists:categories,id',
+        ]);
+
+        $categories = Category::when($request->has('ids'), function ($query) use ($request) {
+            $query->whereIn('id', $request->ids);
+        })->get();
+
+        $fileName = 'categories-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($categories) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, ['ID', 'Name', 'Slug', 'Description', 'Created At']);
+
+            foreach ($categories as $cat) {
+                fputcsv($handle, [
+                    $cat->id,
+                    $cat->name,
+                    $cat->slug,
+                    $cat->description,
+                    $cat->created_at?->toDateTimeString(),
+                ]);
+            }
+
+            fclose($handle);
+        }, $fileName, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 }
