@@ -37,6 +37,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('categories', CategoryController::class);
     Route::get('categories-datatable', [CategoryController::class, 'datatableJson'])->name('categories.datatable');
+    Route::post('categories/bulk-delete', [CategoryController::class, 'bulkDelete'])->name('categories.bulk-delete');
+    Route::post('categories/export', [CategoryController::class, 'export'])->name('categories.export');
 
     Route::resource('products', ProductController::class);
     Route::get('products-datatable', [TaskController::class, 'datatableJson'])->name('products.datatable');

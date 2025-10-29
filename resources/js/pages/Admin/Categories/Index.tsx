@@ -41,9 +41,7 @@ const Index: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
     const [showSingleDeleteDialog, setShowSingleDeleteDialog] = useState(false);
-    const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(
-        null,
-    );
+    const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
 
     // Table States
     const [pagination, setPagination] = useState<PaginationState>({
@@ -52,15 +50,19 @@ const Index: React.FC = () => {
     });
     const [sorting, setSorting] = useState<SortingState>([]);
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-        {},
-    );
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [totalRows, setTotalRows] = useState<number>(0);
 
     const [filters, setFilters] = useState({
         search: '',
         status: '' as string | string[],
     });
+
+    // Reset pageIndex when filters change
+    const handleFiltersChange = (newFilters: typeof filters) => {
+        setFilters(newFilters);
+        setPagination((prev) => ({ ...prev, pageIndex: 0 })); // Reset to first page
+    };
 
     // Fetch Data
     const fetchCategories = useCallback(async () => {
@@ -96,14 +98,12 @@ const Index: React.FC = () => {
         fetchCategories();
     }, [fetchCategories]);
 
+    // Reset row selection when pagination changes
     useEffect(() => {
         table.resetRowSelection();
-    }, [pagination.pageIndex, pagination.pageSize, sorting, filters]);
+    }, [pagination.pageIndex, pagination.pageSize]);
 
-    const resetColumnVisibility = useCallback(
-        () => setColumnVisibility({}),
-        [],
-    );
+    const resetColumnVisibility = useCallback(() => setColumnVisibility({}), []);
 
     const tableColumns = useMemo(
         () =>
@@ -135,10 +135,7 @@ const Index: React.FC = () => {
     });
 
     const selectedRows = table.getFilteredSelectedRowModel().rows;
-    const selectedCategories = useMemo(
-        () => selectedRows.map((row) => row.original),
-        [selectedRows],
-    );
+    const selectedCategories = useMemo(() => selectedRows.map((row) => row.original), [selectedRows]);
     const selectedCount = selectedCategories.length;
 
     // Single Delete
@@ -146,9 +143,7 @@ const Index: React.FC = () => {
         if (!categoryToDelete) return;
         setLoading(true);
         try {
-            const { destroy: getDestroyRoute } = await import(
-                '@/routes/admin/categories'
-            );
+            const { destroy: getDestroyRoute } = await import('@/routes/admin/categories');
             const deleteUrl = getDestroyRoute(categoryToDelete.id).url;
             await axios.delete(deleteUrl);
             toast.success('Category deleted successfully');
@@ -169,9 +164,7 @@ const Index: React.FC = () => {
         try {
             const ids = selectedCategories.map((c) => c.id);
             await axios.post('/admin/categories/bulk-delete', { ids });
-            toast.success(
-                `Deleted ${selectedCategories.length} categories successfully`,
-            );
+            toast.success(`Deleted ${selectedCategories.length} categories successfully`);
             table.resetRowSelection();
             await fetchCategories();
             setShowBulkDeleteDialog(false);
@@ -187,27 +180,18 @@ const Index: React.FC = () => {
     const handleBulkExport = async () => {
         try {
             const ids = selectedCategories.map((c) => c.id);
-            const response = await axios.post(
-                '/admin/categories/export',
-                { ids },
-                { responseType: 'blob' },
-            );
+            const response = await axios.post('/admin/categories/export', { ids }, { responseType: 'blob' });
 
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute(
-                'download',
-                `categories-export-${new Date().toISOString().split('T')[0]}.csv`,
-            );
+            link.setAttribute('download', `categories-export-${new Date().toISOString().split('T')[0]}.csv`);
             document.body.appendChild(link);
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
 
-            toast.success(
-                `Exported ${selectedCategories.length} categories successfully`,
-            );
+            toast.success(`Exported ${selectedCategories.length} categories successfully`);
         } catch (error) {
             console.error('Failed to export categories:', error);
             toast.error('Failed to export categories');
@@ -215,15 +199,7 @@ const Index: React.FC = () => {
     };
 
     const hasHiddenColumns = useMemo(
-        () =>
-            table
-                .getAllColumns()
-                .some(
-                    (column) =>
-                        typeof column.accessorFn !== 'undefined' &&
-                        column.getCanHide() &&
-                        !column.getIsVisible(),
-                ),
+        () => table.getAllColumns().some((column) => typeof column.accessorFn !== 'undefined' && column.getCanHide() && !column.getIsVisible()),
         [table],
     );
 
@@ -232,28 +208,21 @@ const Index: React.FC = () => {
             <Head title="Categories" />
 
             <div className="container mx-auto space-y-6 px-4 py-10 sm:px-0">
-                {/* Header */}
-                <CategoryHeader
-                    onCreateClick={() => router.visit(create().url)}
-                />
+                <CategoryHeader onCreateClick={() => router.visit(create().url)} />
 
-                {/* Filters Toolbar */}
                 <FiltersToolbar
                     filters={filters}
-                    setFilters={setFilters}
+                    setFilters={handleFiltersChange}
                     table={table}
                     statusOptions={statusOptions}
                 />
 
-                {/* Bulk Actions + Column Controls */}
                 <div className="flex items-center justify-between">
                     <CategoryBulkActions
                         selectedCount={selectedCount}
                         selectedCategories={selectedCategories}
                         onExport={handleBulkExport}
-                        onBulkDeleteTrigger={() =>
-                            setShowBulkDeleteDialog(true)
-                        }
+                        onBulkDeleteTrigger={() => setShowBulkDeleteDialog(true)}
                         hasHiddenColumns={hasHiddenColumns}
                         onResetColumns={resetColumnVisibility}
                     />
@@ -267,18 +236,12 @@ const Index: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Data Table */}
                 <div className="px-0 sm:px-0">
                     <DataTable table={table} loading={loading} />
-                    <DataTablePagination
-                        table={table}
-                        totalRows={totalRows}
-                        selectedCount={selectedCount}
-                    />
+                    <DataTablePagination table={table} totalRows={totalRows} selectedCount={selectedCount} />
                 </div>
             </div>
 
-            {/* Delete Dialogs */}
             <DeleteCategoriesDialog
                 categories={selectedCategories}
                 open={showBulkDeleteDialog}
