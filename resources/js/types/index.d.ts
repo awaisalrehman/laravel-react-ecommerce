@@ -1,6 +1,6 @@
-import { InertiaLinkProps } from '@inertiajs/react';
-import { LucideIcon } from 'lucide-react';
-import { PageProps as InertiaPageProps } from '@inertiajs/core';
+import type { InertiaLinkProps } from '@inertiajs/react';
+import type { LucideIcon } from 'lucide-react';
+import type { PageProps as InertiaPageProps } from '@inertiajs/core';
 
 // ─────────────────────────────
 // Core App Entities
@@ -37,6 +37,20 @@ export interface NavItem {
 export interface NavGroup {
   title: string;
   items: NavItem[];
+}
+
+// Extended types for nested navigation
+export interface NavMainItem {
+  title: string;
+  href: NonNullable<InertiaLinkProps['href']>;
+  icon?: LucideIcon | null;
+  isActive?: boolean;
+  items?: NavItem[];
+}
+
+export interface NavMainGroup {
+  title: string;
+  items: NavMainItem[];
 }
 
 // ─────────────────────────────
@@ -90,7 +104,7 @@ export interface Product {
   name: string;
   slug: string;
   description?: string | null;
-  price: string; // Laravel decimal(10,2) → keep as string
+  price: string;
   stock: number;
   image?: string | null;
   gallery?: string[] | null;

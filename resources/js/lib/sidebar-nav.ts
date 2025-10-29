@@ -1,42 +1,42 @@
 import { SquareTerminal, Bot, ShoppingBag, CalendarCheck } from "lucide-react"
+import type { NavMainItem } from "@/types"
 
 export const sidebarNav = {
   navMain: [
     {
       title: "Products",
-      url: "#",
+      href: "#", // Use "#" for parents with children
       icon: ShoppingBag,
-      isActive: true,
       items: [
         {
           title: "Add New",
-          url: "/admin/products/create",
+          href: "/admin/products/create",
         },
         {
           title: "List Products",
-          url: "/admin/products",
+          href: "/admin/products",
         },
       ],
     },
     {
       title: "Categories",
-      url: "#",
+      href: "#", // Use "#" for parents with children
       icon: SquareTerminal,
       items: [
         {
           title: "Add New",
-          url: "/admin/categories/create",
+          href: "/admin/categories/create",
         },
         {
           title: "List Categories",
-          url: "/admin/categories",
+          href: "/admin/categories",
         },
       ],
     },
     {
       title: "Tasks",
-      url: "/admin/tasks",
+      href: "/admin/tasks", // Direct link for items without children
       icon: CalendarCheck,
     },
-  ],
+  ] as NavMainItem[],
 }
