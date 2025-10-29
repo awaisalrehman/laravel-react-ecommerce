@@ -63,6 +63,12 @@ const Index: React.FC = () => {
         priority: '' as string | string[],
     });
 
+    // Reset pageIndex when filters change
+    const handleFiltersChange = (newFilters: typeof filters) => {
+        setFilters(newFilters);
+        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    };
+
     // Fetch Data
     const fetchTasks = useCallback(async () => {
         setLoading(true);
@@ -238,7 +244,7 @@ const Index: React.FC = () => {
                 {/* Filters Toolbar */}
                 <FiltersToolbar
                     filters={filters}
-                    setFilters={setFilters}
+                    setFilters={handleFiltersChange}
                     table={table}
                     statusOptions={statusOptions}
                     priorityOptions={priorityOptions}
