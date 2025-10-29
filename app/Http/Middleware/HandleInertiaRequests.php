@@ -36,6 +36,8 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $route = $request->route();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -48,6 +50,10 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'activeRoute' => [
+                'name' => $route?->getName(),
+                'path' => $request->path(),
+            ],
         ];
     }
 }

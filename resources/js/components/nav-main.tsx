@@ -1,4 +1,4 @@
-import { ChevronRight, type LucideIcon } from "lucide-react"
+import { ChevronRight } from "lucide-react"
 import { Link, usePage } from "@inertiajs/react"
 import { useState, useEffect } from "react"
 
@@ -18,32 +18,38 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
+
 import type { NavMainItem } from "@/types"
 
-export function NavMain({
-  items,
-}: {
-  items: NavMainItem[]
-}) {
+export function NavMain({ items }: { items: NavMainItem[] }) {
   const { url: currentUrl } = usePage()
   const [openMenus, setOpenMenus] = useState<Set<string>>(new Set())
+  
+  const getHref = (href: NavMainItem["href"]) =>
+    typeof href === "string" ? href : href?.url ?? ""
 
-  // Check if a menu item or any of its children is active
+  const normalizePath = (path: string) => path.replace(/\/+$/, "")
+
   const isItemActive = (item: NavMainItem) => {
-    if (item.href === currentUrl) return true
-    if (item.items?.some(subItem => subItem.href === currentUrl)) return true
+    const current = normalizePath(currentUrl)
+    const href = normalizePath(getHref(item.href))
+
+    if (current === href || current.startsWith(href + "/")) return true
+
+    if (item.items?.some((sub) => isSubItemActive(sub.href))) return true
+
     return false
   }
 
-  // Check if a specific sub-item is active
-  const isSubItemActive = (href: string) => {
-    return href === currentUrl
+  const isSubItemActive = (href: NavMainItem["href"]) => {
+    const current = normalizePath(currentUrl)
+    const target = normalizePath(getHref(href))
+    return current === target || current.startsWith(target + "/")
   }
 
-  // Initialize open menus based on active items
   useEffect(() => {
     const initiallyOpen = new Set<string>()
-    items.forEach(item => {
+    items.forEach((item) => {
       if (item.items && isItemActive(item)) {
         initiallyOpen.add(item.title)
       }
@@ -52,13 +58,9 @@ export function NavMain({
   }, [items, currentUrl])
 
   const toggleMenu = (title: string) => {
-    setOpenMenus(prev => {
+    setOpenMenus((prev) => {
       const newSet = new Set(prev)
-      if (newSet.has(title)) {
-        newSet.delete(title)
-      } else {
-        newSet.add(title)
-      }
+      newSet.has(title) ? newSet.delete(title) : newSet.add(title)
       return newSet
     })
   }
@@ -68,7 +70,6 @@ export function NavMain({
       event.preventDefault()
       toggleMenu(item.title)
     }
-    // If no children, navigation will proceed normally via the Link component
   }
 
   return (
@@ -81,36 +82,33 @@ export function NavMain({
             asChild
             open={openMenus.has(item.title)}
             onOpenChange={(open) => {
-              if (open) {
-                setOpenMenus(prev => new Set(prev).add(item.title))
-              } else {
-                setOpenMenus(prev => {
-                  const newSet = new Set(prev)
-                  newSet.delete(item.title)
-                  return newSet
-                })
-              }
+              setOpenMenus((prev) => {
+                const newSet = new Set(prev)
+                open ? newSet.add(item.title) : newSet.delete(item.title)
+                return newSet
+              })
             }}
           >
             <SidebarMenuItem>
-              <SidebarMenuButton 
-                asChild 
+              <SidebarMenuButton
+                asChild
                 tooltip={item.title}
                 isActive={isItemActive(item)}
               >
-                <Link 
-                  href={item.items?.length ? "#" : item.href}
-                  onClick={(e: React.MouseEvent) => handleParentClick(item, e)}
+                <Link
+                  href={item.items?.length ? "#" : getHref(item.href)}
+                  onClick={(e) => handleParentClick(item, e)}
                   className="flex items-center gap-2 w-full"
                 >
                   {item.icon && <item.icon className="h-4 w-4" />}
                   <span>{item.title}</span>
                 </Link>
               </SidebarMenuButton>
+
               {item.items?.length ? (
                 <>
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuAction 
+                    <SidebarMenuAction
                       className="data-[state=open]:rotate-90"
                       onClick={() => toggleMenu(item.title)}
                     >
@@ -118,15 +116,16 @@ export function NavMain({
                       <span className="sr-only">Toggle {item.title} menu</span>
                     </SidebarMenuAction>
                   </CollapsibleTrigger>
+
                   <CollapsibleContent>
                     <SidebarMenuSub>
                       {item.items.map((subItem) => (
                         <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton 
-                            asChild 
+                          <SidebarMenuSubButton
+                            asChild
                             isActive={isSubItemActive(subItem.href)}
                           >
-                            <Link href={subItem.href}>
+                            <Link href={getHref(subItem.href)}>
                               <span>{subItem.title}</span>
                             </Link>
                           </SidebarMenuSubButton>

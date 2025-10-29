@@ -57,6 +57,11 @@ export interface NavMainGroup {
 // Shared Data from Middleware
 // ─────────────────────────────
 
+export interface ActiveRoute {
+  name: string | null;
+  path: string;
+}
+
 export interface SharedData {
   name: string;
   auth: Auth;
@@ -66,6 +71,7 @@ export interface SharedData {
     error?: string;
     message?: string;
   };
+  activeRoute: ActiveRoute;
   [key: string]: unknown;
 }
 
