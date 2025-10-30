@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class CategoryController extends Controller
@@ -118,14 +119,29 @@ class CategoryController extends Controller
             'name'        => 'required|string|max:255',
             'slug'        => 'nullable|string|max:255|unique:categories,slug',
             'description' => 'nullable|string',
-            'image'       => 'nullable|string',
+            'image'       => 'nullable|image|max:2048',
+            'status'      => 'required|in:0,1',
         ]);
+
+        $validated['slug'] = Str::slug($validated['name']);
+        $validated['status'] = (int) $validated['status'];
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('categories', 'public');
+        }
 
         Category::create($validated);
 
         return redirect()
             ->route('admin.categories.index')
             ->with('success', 'Category created successfully.');
+    }
+
+    public function edit(Category $category)
+    {
+        return inertia('Admin/Categories/Edit', [
+            'category' => $category
+        ]);
     }
 
     /**
@@ -137,8 +153,13 @@ class CategoryController extends Controller
             'name'        => 'required|string|max:255',
             'slug'        => 'nullable|string|max:255|unique:categories,slug,' . $category->id,
             'description' => 'nullable|string',
-            'image'       => 'nullable|string',
+            'image'       => 'nullable|image|max:2048',
+            'status'      => 'required|in:0,1',
         ]);
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('categories', 'public');
+        }
 
         $category->update($validated);
 
