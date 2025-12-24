@@ -12,7 +12,7 @@
         "clsx",
         "cn"
     ],
-    "tailwindStylesheet": "resources/css/app.css",
+    "tailwindStylesheet": "frontend/app.css",
     "tabWidth": 4,
     "overrides": [
         {
